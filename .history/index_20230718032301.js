@@ -1,7 +1,6 @@
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
-const jwt = require('jsonwebtoken');
 const port = process.env.PORT || 5000;
 const app = express()
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
@@ -53,7 +52,7 @@ async function run() {
         })
 
         //get parlour services
-        app.get('/services', verifyJWT, async (req, res) => {
+        app.get('/services', async (req, res) => {
             const query = {}
             const options = await parlourServicesCollection.find(query).toArray()
             res.send(options)
@@ -65,13 +64,6 @@ async function run() {
             const query = { _id: new ObjectId(id) }
             const service = await parlourServicesCollection.findOne(query)
             res.send(service)
-        })
-
-        //store users information from sign up page
-        app.post('/users', async (req, res) => {
-            const user = req.body;
-            const result = await usersCollection.insertOne(user);
-            res.send(result)
         })
 
     }

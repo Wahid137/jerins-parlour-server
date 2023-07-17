@@ -53,7 +53,7 @@ async function run() {
         })
 
         //get parlour services
-        app.get('/services', verifyJWT, async (req, res) => {
+        app.get('/services', async (req, res) => {
             const query = {}
             const options = await parlourServicesCollection.find(query).toArray()
             res.send(options)

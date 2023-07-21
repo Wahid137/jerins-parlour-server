@@ -40,7 +40,6 @@ async function run() {
         const parlourServicesCollection = client.db('jerinsParlour').collection('parlourServices');
         const usersCollection = client.db('jerinsParlour').collection('users');
         const paymentsCollection = client.db('jerinsParlour').collection('payments');
-        const reviewsCollection = client.db('jerinsParlour').collection('reviews');
 
 
         //give token for a user, at first check that the user have in usersCollection
@@ -98,25 +97,8 @@ async function run() {
         //store payment information and update bookings 
         app.post('/payments', verifyJWT, async (req, res) => {
             const payment = req.body;
-            const query = {
-                name: payment.name,
-                email: payment.email
-            }
-            const alreadyBooked = await paymentsCollection.find(query).toArray()
-            if (alreadyBooked.length) {
-                const message = `You already have booking on ${payment.name}`
-                return res.send({ acknowledged: false, message })
-            }
             const result = await paymentsCollection.insertOne(payment)
             res.send(result)
-        })
-
-        //add review in database
-        app.post('/review', async (req, res) => {
-            const review = req.body;
-            const result = await reviewsCollection.insertOne(review);
-            res.send(result)
-
         })
 
         //get parlour booking and payment services

@@ -3,10 +3,10 @@ const cors = require('cors');
 require('dotenv').config();
 const jwt = require('jsonwebtoken');
 const port = process.env.PORT || 5000;
+const app = express()
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY)
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
-const app = express()
 
 //middleware
 app.use(cors())
@@ -39,8 +39,6 @@ async function run() {
     try {
         const parlourServicesCollection = client.db('jerinsParlour').collection('parlourServices');
         const usersCollection = client.db('jerinsParlour').collection('users');
-        const paymentsCollection = client.db('jerinsParlour').collection('payments');
-        const reviewsCollection = client.db('jerinsParlour').collection('reviews');
 
 
         //give token for a user, at first check that the user have in usersCollection
@@ -76,61 +74,6 @@ async function run() {
             const result = await usersCollection.insertOne(user);
             res.send(result)
         })
-        //create payment intent give client secret
-        app.post('/create-payment-intent', async (req, res) => {
-            const booking = req.body;
-            const price = booking.price;
-            const amount = price * 100;
-
-            const paymentIntent = await stripe.paymentIntents.create({
-                currency: 'usd',
-                amount: amount,
-                "payment_method_types": [
-                    "card"
-                ]
-            });
-            res.send({
-                clientSecret: paymentIntent.client_secret,
-            });
-
-        })
-
-        //store payment information and update bookings 
-        app.post('/payments', verifyJWT, async (req, res) => {
-            const payment = req.body;
-            const query = {
-                name: payment.name,
-                email: payment.email
-            }
-            const alreadyBooked = await paymentsCollection.find(query).toArray()
-            if (alreadyBooked.length) {
-                const message = `You already have booking on ${payment.name}`
-                return res.send({ acknowledged: false, message })
-            }
-            const result = await paymentsCollection.insertOne(payment)
-            res.send(result)
-        })
-
-        //add review in database
-        app.post('/review', async (req, res) => {
-            const review = req.body;
-            const result = await reviewsCollection.insertOne(review);
-            res.send(result)
-
-        })
-
-        //get parlour booking and payment services
-        app.get('/payments', verifyJWT, async (req, res) => {
-            const email = req.query.email;
-            const decodedEmail = req.decoded.email;
-            if (decodedEmail !== email) {
-                return res.status(403).send({ message: 'forbidden access' })
-            }
-            const query = { email: email }
-            const options = await paymentsCollection.find(query).toArray()
-            res.send(options)
-        })
-
 
     }
     finally {

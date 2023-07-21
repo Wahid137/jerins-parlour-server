@@ -113,10 +113,7 @@ async function run() {
 
         //add review in database
         app.post('/review', async (req, res) => {
-            const review = req.body;
-            const result = await reviewsCollection.insertOne(review);
-            res.send(result)
-
+            const
         })
 
         //get parlour booking and payment services

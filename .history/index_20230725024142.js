@@ -217,14 +217,6 @@ async function run() {
             res.send(options)
         })
 
-        //delete service from database
-        app.delete('/service/:id', verifyJWT, verifyAdmin, async (req, res) => {
-            const id = req.params.id;
-            const filter = { _id: new ObjectId(id) }
-            const result = await servicesCollection.deleteOne(filter)
-            res.send(result)
-        })
-
         //make admin 
         app.put('/users/admin/:email', verifyJWT, verifyAdmin, async (req, res) => {
             const email = req.params.email;

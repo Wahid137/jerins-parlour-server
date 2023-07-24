@@ -85,19 +85,7 @@ async function run() {
         const usersCollection = client.db('jerinsParlour').collection('users');
         const paymentsCollection = client.db('jerinsParlour').collection('payments');
         const reviewsCollection = client.db('jerinsParlour').collection('reviews');
-        const servicesCollection = client.db('jerinsParlour').collection('services');
 
-
-        //make sure you use verifyAdmin after verifyJWT
-        const verifyAdmin = async (req, res, next) => {
-            const decodedEmail = req.decoded.email;
-            const query = { email: decodedEmail }
-            const user = await usersCollection.findOne(query);
-            if (user?.role !== 'admin') {
-                return res.status(403).send({ message: 'Only admin Access!' })
-            }
-            next();
-        }
 
         //give token for a user, at first check that the user have in usersCollection
         app.get('/jwt', async (req, res) => {
@@ -169,12 +157,6 @@ async function run() {
             res.send(result)
         })
 
-        app.get('/bookings', async (req, res) => {
-            const query = {};
-            const options = await paymentsCollection.find(query).toArray()
-            res.send(options)
-        })
-
         //add review in database
         app.post('/review', async (req, res) => {
             const review = req.body;
@@ -204,54 +186,12 @@ async function run() {
         })
 
         //store services in database
-        app.post('/addservice', verifyJWT, async (req, res) => {
-            const service = req.body;
-            const result = await servicesCollection.insertOne(service);
+        app.post('/addservice', verifyJWT, verifyAdmin, async (req, res) => {
+            const doctor = req.body;
+            const result = await doctorsCollection.insertOne(doctor);
             res.send(result)
         })
 
-        //get the added services from data database
-        app.get('/addservice', async (req, res) => {
-            const query = {}
-            const options = await servicesCollection.find(query).toArray()
-            res.send(options)
-        })
-
-        //delete service from database
-        app.delete('/service/:id', verifyJWT, verifyAdmin, async (req, res) => {
-            const id = req.params.id;
-            const filter = { _id: new ObjectId(id) }
-            const result = await servicesCollection.deleteOne(filter)
-            res.send(result)
-        })
-
-        //make admin 
-        app.put('/users/admin/:email', verifyJWT, verifyAdmin, async (req, res) => {
-            const email = req.params.email;
-            const filter = { email: email };
-            const options = { upsert: true };
-            const updatedDoc = {
-                $set: {
-                    role: "admin"
-                }
-            }
-            const result = await usersCollection.updateOne(filter, updatedDoc, options)
-            res.send(result);
-        })
-
-        //make admin if user's role is admin then user can make admin 
-        app.put('/approve/admin/:id', async (req, res) => {
-            const id = req.params.id;
-            const filter = { _id: new ObjectId(id) }
-            const options = { upsert: true };
-            const updatedDoc = {
-                $set: {
-                    approve: 'true'
-                }
-            }
-            const result = await paymentsCollection.updateOne(filter, updatedDoc, options)
-            res.send(result)
-        })
 
     }
     finally {

@@ -2,8 +2,6 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 const jwt = require('jsonwebtoken');
-const nodemailer = require("nodemailer");
-const mg = require('nodemailer-mailgun-transport');
 const port = process.env.PORT || 5000;
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY)
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
@@ -19,48 +17,6 @@ const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@clu
 console.log(uri)
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, { serverApi: { version: ServerApiVersion.v1, strict: true, deprecationErrors: true, } });
-
-//send email in mail gun
-function sendBookingEmail(payment) {
-    const { email, treatName } = payment
-    const auth = {
-        auth: {
-            api_key: process.env.EMAIL_SEND_KEY,
-            domain: process.env.EMAIL_SEND_DOMAIN
-        }
-    }
-
-    const transporter = nodemailer.createTransport(mg(auth));
-
-    // let transporter = nodemailer.createTransport({
-    //     host: 'smtp.sendgrid.net',
-    //     port: 587,
-    //     auth: {
-    //         user: "apikey",
-    //         pass: process.env.SENDGRID_API_KEY
-    //     }
-    // })
-    transporter.sendMail({
-        from: "wahidahmedshanto@gmail.com", // verified sender email
-        to: email, // recipient email
-        subject: `Your service for ${treatName} is confirmed`, // Subject line
-        text: "Hello world!", // plain text body
-        html: `
-        <h3>Your Booking is Confirmed</h3>
-        <div>
-            <P>Your service for treatment: ${treatName}</p>
-            <p>Please Visit us on timely</p>
-            <p>Thanks from Jerins Parlour.</P>
-        `, // html body
-    }, function (error, info) {
-        if (error) {
-            console.log(error);
-        } else {
-            console.log('Email sent: ' + info.response);
-        }
-    });
-}
-
 
 async function run() {
     //verify token after getting token from local storage
@@ -85,19 +41,7 @@ async function run() {
         const usersCollection = client.db('jerinsParlour').collection('users');
         const paymentsCollection = client.db('jerinsParlour').collection('payments');
         const reviewsCollection = client.db('jerinsParlour').collection('reviews');
-        const servicesCollection = client.db('jerinsParlour').collection('services');
 
-
-        //make sure you use verifyAdmin after verifyJWT
-        const verifyAdmin = async (req, res, next) => {
-            const decodedEmail = req.decoded.email;
-            const query = { email: decodedEmail }
-            const user = await usersCollection.findOne(query);
-            if (user?.role !== 'admin') {
-                return res.status(403).send({ message: 'Only admin Access!' })
-            }
-            next();
-        }
 
         //give token for a user, at first check that the user have in usersCollection
         app.get('/jwt', async (req, res) => {
@@ -155,7 +99,7 @@ async function run() {
         app.post('/payments', verifyJWT, async (req, res) => {
             const payment = req.body;
             const query = {
-                name: payment.treatName,
+                name: payment.name,
                 email: payment.email
             }
             const alreadyBooked = await paymentsCollection.find(query).toArray()
@@ -167,12 +111,6 @@ async function run() {
             //send email about appointment confirmation
             sendBookingEmail(payment)
             res.send(result)
-        })
-
-        app.get('/bookings', async (req, res) => {
-            const query = {};
-            const options = await paymentsCollection.find(query).toArray()
-            res.send(options)
         })
 
         //add review in database
@@ -195,63 +133,6 @@ async function run() {
             res.send(options)
         })
 
-        //from the users list check that the user is admin or not
-        app.get('/users/admin/:email', async (req, res) => {
-            const email = req.params.email;
-            const query = { email: email }
-            const user = await usersCollection.findOne(query)
-            res.send({ isAdmin: user?.role === 'admin' })
-        })
-
-        //store services in database
-        app.post('/addservice', verifyJWT, async (req, res) => {
-            const service = req.body;
-            const result = await servicesCollection.insertOne(service);
-            res.send(result)
-        })
-
-        //get the added services from data database
-        app.get('/addservice', async (req, res) => {
-            const query = {}
-            const options = await servicesCollection.find(query).toArray()
-            res.send(options)
-        })
-
-        //delete service from database
-        app.delete('/service/:id', verifyJWT, verifyAdmin, async (req, res) => {
-            const id = req.params.id;
-            const filter = { _id: new ObjectId(id) }
-            const result = await servicesCollection.deleteOne(filter)
-            res.send(result)
-        })
-
-        //make admin 
-        app.put('/users/admin/:email', verifyJWT, verifyAdmin, async (req, res) => {
-            const email = req.params.email;
-            const filter = { email: email };
-            const options = { upsert: true };
-            const updatedDoc = {
-                $set: {
-                    role: "admin"
-                }
-            }
-            const result = await usersCollection.updateOne(filter, updatedDoc, options)
-            res.send(result);
-        })
-
-        //make admin if user's role is admin then user can make admin 
-        app.put('/approve/admin/:id', async (req, res) => {
-            const id = req.params.id;
-            const filter = { _id: new ObjectId(id) }
-            const options = { upsert: true };
-            const updatedDoc = {
-                $set: {
-                    approve: 'true'
-                }
-            }
-            const result = await paymentsCollection.updateOne(filter, updatedDoc, options)
-            res.send(result)
-        })
 
     }
     finally {

@@ -94,7 +94,7 @@ async function run() {
             const query = { email: decodedEmail }
             const user = await usersCollection.findOne(query);
             if (user?.role !== 'admin') {
-                return res.status(403).send({ message: 'Only admin Access!' })
+                return res.status(403).send({ message: 'Only admin can make admin!' })
             }
             next();
         }
@@ -169,10 +169,8 @@ async function run() {
             res.send(result)
         })
 
-        app.get('/bookings', async (req, res) => {
-            const query = {};
-            const options = await paymentsCollection.find(query).toArray()
-            res.send(options)
+        app.get('/payment', async (req, res) => {
+
         })
 
         //add review in database
@@ -210,21 +208,6 @@ async function run() {
             res.send(result)
         })
 
-        //get the added services from data database
-        app.get('/addservice', async (req, res) => {
-            const query = {}
-            const options = await servicesCollection.find(query).toArray()
-            res.send(options)
-        })
-
-        //delete service from database
-        app.delete('/service/:id', verifyJWT, verifyAdmin, async (req, res) => {
-            const id = req.params.id;
-            const filter = { _id: new ObjectId(id) }
-            const result = await servicesCollection.deleteOne(filter)
-            res.send(result)
-        })
-
         //make admin 
         app.put('/users/admin/:email', verifyJWT, verifyAdmin, async (req, res) => {
             const email = req.params.email;
@@ -237,20 +220,6 @@ async function run() {
             }
             const result = await usersCollection.updateOne(filter, updatedDoc, options)
             res.send(result);
-        })
-
-        //make admin if user's role is admin then user can make admin 
-        app.put('/approve/admin/:id', async (req, res) => {
-            const id = req.params.id;
-            const filter = { _id: new ObjectId(id) }
-            const options = { upsert: true };
-            const updatedDoc = {
-                $set: {
-                    approve: 'true'
-                }
-            }
-            const result = await paymentsCollection.updateOne(filter, updatedDoc, options)
-            res.send(result)
         })
 
     }
